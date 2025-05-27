@@ -1,4 +1,4 @@
-<img src="github/readme_banner.png">
+<img src=".github/readme_banner.png">
 # ChangeLogger
 
 ![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue.svg)
