@@ -49,13 +49,13 @@ function validateOpenAIApiKey(apiKey: string): { isValid: boolean; errorMessage?
 		return { isValid: false, errorMessage: 'API key must start with "sk-"' };
 	}
 
-	// Check minimum length (OpenAI keys are typically around 48-50 characters)
+	// Check minimum length (OpenAI keys can be 48-50 characters for old format, or ~164 for new format)
 	if (trimmedKey.length < 40) {
 		return { isValid: false, errorMessage: 'API key appears to be too short' };
 	}
 
-	// Check maximum reasonable length
-	if (trimmedKey.length > 100) {
+	// Check maximum reasonable length (updated for new longer format)
+	if (trimmedKey.length > 200) {
 		return { isValid: false, errorMessage: 'API key appears to be too long' };
 	}
 
@@ -98,7 +98,7 @@ runTest('API Key Validation - Empty Key', () => {
 });
 
 runTest('API Key Validation - Too Long', () => {
-	const longKey = 'sk-' + 'a'.repeat(200);
+	const longKey = 'sk-' + 'a'.repeat(250); // 253 characters total, should fail (maximum 200)
 	const result = validateOpenAIApiKey(longKey);
 	assert.ok(!result.isValid, 'Too long API key should fail validation');
 });
@@ -107,6 +107,12 @@ runTest('API Key Validation - Invalid Characters', () => {
 	const invalidKey = 'sk-test@key#invalid';
 	const result = validateOpenAIApiKey(invalidKey);
 	assert.ok(!result.isValid, 'API key with invalid characters should fail validation');
+});
+
+runTest('API Key Validation - Valid Long Key (New Format)', () => {
+	const validLongKey = 'sk-' + 'a'.repeat(161); // 164 characters total (new format)
+	const result = validateOpenAIApiKey(validLongKey);
+	assert.ok(result.isValid, 'Valid long format API key should pass validation');
 });
 
 // Test Suite 2: Environment Variable Support

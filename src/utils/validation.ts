@@ -124,7 +124,7 @@ export class ValidationUtils {
 				};
 			}
 
-			// Check minimum length (OpenAI keys are typically around 48-50 characters)
+			// Check minimum length (OpenAI keys: old format ~48-50 chars, new format ~164 chars)
 			if (trimmedKey.length < 40) {
 				const error = 'OpenAI API key appears to be too short';
 				console.error(`[ValidationUtils] ${error} (length: ${trimmedKey.length})`);
@@ -135,14 +135,14 @@ export class ValidationUtils {
 				};
 			}
 
-			// Check maximum reasonable length
-			if (trimmedKey.length > 100) {
+			// Check maximum reasonable length (supports both old and new formats)
+			if (trimmedKey.length > 200) {
 				const error = 'OpenAI API key appears to be too long';
 				console.error(`[ValidationUtils] ${error} (length: ${trimmedKey.length})`);
 				return {
 					isValid: false,
 					errorMessage: error,
-					context: `Key length: ${trimmedKey.length}, expected: less than 100 characters`
+					context: `Key length: ${trimmedKey.length}, expected: less than 200 characters`
 				};
 			}
 
