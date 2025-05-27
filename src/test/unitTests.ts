@@ -178,7 +178,7 @@ runTest('Changelog Path Validation - Parent Directory', () => {
 });
 
 // Test Suite 4: Basic Functionality
-console.log('\n🔍 Testing Basic Functionality...');
+console.log('\nTesting Basic Functionality...');
 
 runTest('Basic Math Operations', () => {
 	assert.strictEqual(2 + 2, 4, 'Basic addition should work');
@@ -210,7 +210,7 @@ runTest('JSON Operations', () => {
 });
 
 // Test Suite 5: Configuration Logic
-console.log('\n⚙️ Testing Configuration Logic...');
+console.log('\nTesting Configuration Logic...');
 
 function getDefaultConfiguration() {
 	return {
