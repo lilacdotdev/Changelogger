@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { CommitInfo, FileChange } from '../git/gitDataExtractor';
+import { CommitInfo } from '../git/gitDataExtractor';
 import { FileUtils, FileOperationResult } from '../utils/fileUtils';
 import { ValidationUtils } from '../utils/validation';
+import { AIIntegrationService } from '../ai/aiIntegrationService';
 
 /**
  * Interface for changelog generation options
@@ -37,6 +38,12 @@ export interface ChangelogResult {
 		deletedFiles: number;
 		modifiedFiles: number;
 		aiProcessedFiles?: number;
+		aiSummaryGenerated?: boolean;
+		tokenUsage?: {
+			promptTokens: number;
+			completionTokens: number;
+			totalTokens: number;
+		};
 	};
 }
 
@@ -75,13 +82,34 @@ export class ChangelogGenerator {
 				console.error(`[ChangelogGenerator] Options validation failed: ${validationResult.errorMessage}`);
 				return {
 					success: false,
-					...(validationResult.errorMessage && { errorMessage: validationResult.errorMessage }),
-					...(validationResult.context && { context: validationResult.context })
+					errorMessage: validationResult.errorMessage || 'Options validation failed',
+					context: validationResult.context || 'Validation failed'
 				};
 			}
 
+			// Generate AI summary if in AI mode
+			let aiSummary: string | undefined;
+			let tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number; } | undefined;
+			let aiSummaryGenerated = false;
+
+			if (options.mode === 'ai') {
+				console.log('[ChangelogGenerator] AI mode enabled, attempting to generate AI summary');
+				const aiService = AIIntegrationService.getInstance();
+				const aiResult = await aiService.generateCommitSummary(commitInfo);
+				
+				if (aiResult.success && aiResult.summary) {
+					aiSummary = aiResult.summary;
+					tokenUsage = aiResult.tokenUsage;
+					aiSummaryGenerated = true;
+					console.log(`[ChangelogGenerator] AI summary generated successfully: ${aiSummary.length} characters`);
+				} else {
+					console.warn(`[ChangelogGenerator] AI summary generation failed: ${aiResult.errorMessage}`);
+					// Continue with base mode formatting if AI fails
+				}
+			}
+
 			// Generate the changelog entry content
-			const changelogEntry = this.formatChangelogEntry(commitInfo, options.mode);
+			const changelogEntry = this.formatChangelogEntry(commitInfo, options.mode, aiSummary);
 			console.log(`[ChangelogGenerator] Generated changelog entry (${changelogEntry.length} characters)`);
 
 			// Write to changelog file
@@ -90,8 +118,8 @@ export class ChangelogGenerator {
 				console.error(`[ChangelogGenerator] Failed to write changelog: ${writeResult.errorMessage}`);
 				return {
 					success: false,
-					...(writeResult.errorMessage && { errorMessage: writeResult.errorMessage }),
-					...(writeResult.context && { context: writeResult.context })
+					errorMessage: writeResult.errorMessage || 'Failed to write changelog',
+					context: writeResult.context || 'File write operation failed'
 				};
 			}
 
@@ -102,7 +130,9 @@ export class ChangelogGenerator {
 				deletedFiles: commitInfo.fileChanges.filter(f => f.changeType === 'deleted').length,
 				modifiedFiles: commitInfo.fileChanges.filter(f => f.changeType === 'modified').length,
 				...(options.mode === 'ai' && {
-					aiProcessedFiles: commitInfo.fileChanges.filter(f => f.includeInAI).length
+					aiProcessedFiles: commitInfo.fileChanges.filter(f => f.includeInAI).length,
+					aiSummaryGenerated,
+					...(tokenUsage && { tokenUsage })
 				})
 			};
 
@@ -128,9 +158,10 @@ export class ChangelogGenerator {
 	 * Format commit information into a changelog entry
 	 * @param commitInfo The commit information
 	 * @param mode The generation mode (base or ai)
+	 * @param aiSummary The AI-generated summary
 	 * @returns string The formatted changelog entry
 	 */
-	private static formatChangelogEntry(commitInfo: CommitInfo, mode: 'base' | 'ai'): string {
+	private static formatChangelogEntry(commitInfo: CommitInfo, mode: 'base' | 'ai', aiSummary?: string): string {
 		try {
 			console.log(`[ChangelogGenerator] Formatting changelog entry in ${mode} mode`);
 
@@ -178,16 +209,10 @@ export class ChangelogGenerator {
 				}
 			}
 
-			// AI-powered summary section (placeholder for future implementation)
-			if (mode === 'ai') {
+			// AI-powered summary section
+			if (mode === 'ai' && aiSummary) {
 				lines.push('### AI Summary:');
-				const aiProcessedFiles = commitInfo.fileChanges.filter(f => f.includeInAI);
-				if (aiProcessedFiles.length > 0) {
-					lines.push('*AI-powered summary will be generated here in a future update.*');
-					lines.push(`*Files processed for AI analysis: ${aiProcessedFiles.length}*`);
-				} else {
-					lines.push('*No files were processed for AI analysis (all files filtered or too large).*');
-				}
+				lines.push(aiSummary);
 				lines.push('');
 			}
 
@@ -246,7 +271,6 @@ export class ChangelogGenerator {
 			}
 
 			// Prepare the content to append
-			const timestamp = new Date().toISOString();
 			const entryWithSeparator = `\n${changelogEntry}\n${this.CHANGELOG_SEPARATOR}\n`;
 
 			// Check if changelog file exists
@@ -294,8 +318,8 @@ export class ChangelogGenerator {
 			if (!pathValidation.isValid) {
 				return {
 					isValid: false,
-					errorMessage: pathValidation.errorMessage,
-					context: pathValidation.context
+					errorMessage: pathValidation.errorMessage || 'Invalid changelog path',
+					context: pathValidation.context || 'Changelog path validation failed'
 				};
 			}
 
@@ -304,8 +328,8 @@ export class ChangelogGenerator {
 			if (!workspaceValidation.isValid) {
 				return {
 					isValid: false,
-					errorMessage: workspaceValidation.errorMessage,
-					context: workspaceValidation.context
+					errorMessage: workspaceValidation.errorMessage || 'Invalid workspace path',
+					context: workspaceValidation.context || 'Workspace validation failed'
 				};
 			}
 

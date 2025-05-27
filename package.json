@@ -43,7 +43,10 @@
         },
         "changelogger.mode": {
           "type": "string",
-          "enum": ["base", "ai"],
+          "enum": [
+            "base",
+            "ai"
+          ],
           "default": "base",
           "description": "Operating mode: base (git info only) or ai (AI-powered summaries)"
         },
@@ -87,6 +90,7 @@
   },
   "dependencies": {
     "axios": "^1.9.0",
+    "openai": "^4.103.0",
     "simple-git": "^3.27.0"
   }
 }
