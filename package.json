@@ -2,7 +2,7 @@
   "name": "changelogger",
   "displayName": "Changelogger",
   "description": "Your Changes, Documented. Your Team, Informed.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.100.0"
   },
@@ -31,6 +31,10 @@
       {
         "command": "changelogger.toggleMode",
         "title": "Changelogger: Toggle Mode (Base/AI)"
+      },
+      {
+        "command": "changelogger.testAI",
+        "title": "Changelogger: Test AI Integration"
       }
     ],
     "configuration": {
@@ -72,7 +76,8 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "test:unit": "npm run compile-tests && node out/test/unitTests.js"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

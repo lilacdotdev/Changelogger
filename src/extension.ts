@@ -9,6 +9,7 @@ import { ValidationUtils } from './utils/validation';
 import { Repository } from './git/gitExtensionTypes';
 import { ConfigurationManager } from './config/configurationManager';
 import { AIIntegrationService } from './ai/aiIntegrationService';
+import { StatusBarService } from './ui/statusBar';
 
 /**
  * This method is called when your extension is activated
@@ -24,9 +25,11 @@ export function activate(context: vscode.ExtensionContext) {
 	const gitHookIntegration = GitHookIntegration.getInstance();
 	const configManager = ConfigurationManager.getInstance();
 	const aiService = AIIntegrationService.getInstance();
+	const statusBarService = StatusBarService.getInstance();
 
-	// Initialize git hook integration for automatic commit detection
+	// Initialize services
 	initializeGitHookIntegration(gitHookIntegration);
+	statusBarService.initialize(context);
 
 	// Register the main changelog generation command
 	const generateDisposable = vscode.commands.registerCommand('changelogger.generate', async () => {
@@ -69,6 +72,18 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	// Register the test AI integration command
+	const testAIDisposable = vscode.commands.registerCommand('changelogger.testAI', async () => {
+		try {
+			console.log('[Extension] Changelogger: Test AI command triggered');
+			await testAIIntegration();
+		} catch (error) {
+			console.error('[Extension] Error in changelogger.testAI command:', error);
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			vscode.window.showErrorMessage(`Changelogger: AI test failed: ${errorMessage}`);
+		}
+	});
+
 	/**
 	 * Initialize git hook integration for automatic commit detection
 	 */
@@ -99,6 +114,9 @@ export function activate(context: vscode.ExtensionContext) {
 	async function executeChangelogGeneration(specificRepoPath?: string): Promise<void> {
 		try {
 			console.log('[Extension] Executing changelog generation');
+
+			// Show temporary status in status bar
+			statusBarService.showTemporaryMessage('Generating changelog...', 2000);
 
 			// Validate VS Code workspace
 			const workspaceValidation = ValidationUtils.validateVSCodeWorkspace();
@@ -151,6 +169,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 					if (switchToBase === 'Switch to Base Mode') {
 						await configManager.enableBaseMode();
+						statusBarService.updateStatusBar();
 						vscode.window.showInformationMessage('Changelogger: Switched to Base mode');
 					} else if (switchToBase === 'Configure API Key') {
 						await setOpenAIApiKey();
@@ -213,8 +232,10 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 				
 				vscode.window.showInformationMessage(message);
+				statusBarService.showTemporaryMessage('Changelog generated!', 3000);
 			} else {
 				vscode.window.showInformationMessage('Changelogger: Successfully generated changelog entry!');
+				statusBarService.showTemporaryMessage('Changelog generated!', 3000);
 			}
 
 			console.log('[Extension] Changelog generation completed successfully');
@@ -223,6 +244,7 @@ export function activate(context: vscode.ExtensionContext) {
 			console.error('[Extension] Error in changelog generation:', error);
 			const errorMessage = error instanceof Error ? error.message : String(error);
 			vscode.window.showErrorMessage(`Changelogger: Failed to generate changelog: ${errorMessage}`);
+			statusBarService.showTemporaryMessage('Generation failed!', 3000);
 		}
 	}
 
@@ -233,37 +255,176 @@ export function activate(context: vscode.ExtensionContext) {
 		try {
 			console.log('[Extension] Showing configuration panel');
 
-			const selection = await vscode.window.showQuickPick([
-				'Set OpenAI API Key',
-				'Toggle Mode (Base/AI)',
-				'Toggle Auto Generate',
-				'Reset Configuration',
-				'Test AI Integration'
-			], {
-				placeHolder: 'Choose configuration option',
-				ignoreFocusOut: true
+			// Get current configuration and status
+			const config = configManager.getConfiguration();
+			const aiStatus = await aiService.getStatus() as any;
+			const currentMode = config.mode.toUpperCase();
+			const hasApiKey = config.openaiApiKey.length > 0;
+
+			// Build status information
+			const statusInfo = [
+				`📊 Current Status:`,
+				`   Mode: ${currentMode}`,
+				`   API Key: ${hasApiKey ? 'Configured ✓' : 'Not Set ❌'}`,
+				`   AI Service: ${aiStatus.isReady ? 'Ready ✓' : 'Not Ready ❌'}`,
+				`   Auto Generate: ${config.autoGenerate ? 'Enabled ✓' : 'Disabled ❌'}`,
+				`   Changelog Path: ${config.changelogPath}`,
+				``,
+				`⚙️ Configuration Options:`
+			];
+
+			// Build action items with better organization
+			const actions: string[] = [
+				'$(key) Set OpenAI API Key',
+				`$(arrow-swap) Switch to ${currentMode === 'AI' ? 'BASE' : 'AI'} Mode`,
+				'$(file-text) Change Changelog Path',
+				`$(${config.autoGenerate ? 'circle-slash' : 'play'}) ${config.autoGenerate ? 'Disable' : 'Enable'} Auto Generate`,
+				'$(beaker) Test AI Integration',
+				'$(gear) Advanced Settings',
+				'$(trash) Reset Configuration'
+			];
+
+			// Show status first, then actions
+			const allItems = [...statusInfo, ...actions];
+
+			const selection = await vscode.window.showQuickPick(allItems, {
+				placeHolder: `Changelogger Configuration (Current: ${currentMode} Mode)`,
+				ignoreFocusOut: true,
+				canPickMany: false
 			});
 
-			switch (selection) {
-				case 'Set OpenAI API Key':
-					await setOpenAIApiKey();
-					break;
-				case 'Toggle Mode (Base/AI)':
-					await toggleChangeloggerMode();
-					break;
-				case 'Toggle Auto Generate':
-					await toggleAutoGenerate();
-					break;
-				case 'Reset Configuration':
-					await resetConfiguration();
-					break;
-				case 'Test AI Integration':
-					await testAIIntegration();
-					break;
+			if (!selection || selection.startsWith('📊') || selection.startsWith('   ') || selection.startsWith('⚙️') || selection === '') {
+				return; // User cancelled or selected status info
 			}
+
+			// Execute the selected action
+			await executeConfigurationAction(selection);
 
 		} catch (error) {
 			console.error('[Extension] Error showing configuration panel:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Execute the selected configuration action
+	 * @param action The selected action string
+	 */
+	async function executeConfigurationAction(action: string): Promise<void> {
+		try {
+			console.log(`[Extension] Executing configuration action: ${action}`);
+
+			if (action.includes('Set OpenAI API Key')) {
+				await setOpenAIApiKey();
+			} else if (action.includes('Switch to')) {
+				await toggleChangeloggerMode();
+			} else if (action.includes('Change Changelog Path')) {
+				await changeChangelogPath();
+			} else if (action.includes('Auto Generate')) {
+				await toggleAutoGenerate();
+			} else if (action.includes('Test AI Integration')) {
+				await testAIIntegration();
+			} else if (action.includes('Advanced Settings')) {
+				await showAdvancedSettings();
+			} else if (action.includes('Reset Configuration')) {
+				await resetConfiguration();
+			}
+
+		} catch (error) {
+			console.error('[Extension] Error executing configuration action:', error);
+			vscode.window.showErrorMessage(`Changelogger: Failed to execute action: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/**
+	 * Change the changelog file path
+	 */
+	async function changeChangelogPath(): Promise<void> {
+		try {
+			const config = configManager.getConfiguration();
+			const currentPath = config.changelogPath;
+
+			const newPath = await vscode.window.showInputBox({
+				prompt: 'Enter the changelog file path (relative to workspace root)',
+				value: currentPath,
+				placeHolder: 'CHANGELOG.md',
+				ignoreFocusOut: true,
+				validateInput: (value) => {
+					if (!value || value.trim() === '') {
+						return 'Changelog path cannot be empty';
+					}
+					if (value.includes('..') || value.startsWith('/')) {
+						return 'Path must be relative to workspace root';
+					}
+					return null;
+				}
+			});
+
+			if (!newPath || newPath === currentPath) {
+				return;
+			}
+
+			await configManager.updateConfiguration('changelogPath', newPath);
+			vscode.window.showInformationMessage(`Changelogger: Changelog path updated to ${newPath}`);
+
+		} catch (error) {
+			console.error('[Extension] Error changing changelog path:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Show advanced settings panel
+	 */
+	async function showAdvancedSettings(): Promise<void> {
+		try {
+			const advancedActions = [
+				'$(info) View Configuration Summary',
+				'$(eye) Show API Key Status',
+				'$(file-code) Open Settings JSON',
+				'$(refresh) Reinitialize AI Service',
+				'$(bug) View Service Status',
+				'$(arrow-left) Back to Main Configuration'
+			];
+
+			const selection = await vscode.window.showQuickPick(advancedActions, {
+				placeHolder: 'Advanced Configuration Options',
+				ignoreFocusOut: true
+			});
+
+			if (!selection) {
+				return;
+			}
+
+			if (selection.includes('View Configuration Summary')) {
+				const summary = configManager.getConfigurationSummary();
+				const summaryText = JSON.stringify(summary, null, 2);
+				vscode.window.showInformationMessage(`Configuration Summary:\n${summaryText}`, { modal: true });
+			} else if (selection.includes('Show API Key Status')) {
+				const apiKey = await configManager.getApiKey();
+				const hasKey = apiKey.length > 0;
+				const keyStatus = hasKey ? `Configured (${apiKey.length} characters)` : 'Not configured';
+				vscode.window.showInformationMessage(`API Key Status: ${keyStatus}`);
+			} else if (selection.includes('Open Settings JSON')) {
+				await vscode.commands.executeCommand('workbench.action.openSettings', 'changelogger');
+			} else if (selection.includes('Reinitialize AI Service')) {
+				vscode.window.showInformationMessage('Reinitializing AI service...');
+				const result = await aiService.reinitialize();
+				if (result.success) {
+					vscode.window.showInformationMessage('AI service reinitialized successfully');
+				} else {
+					vscode.window.showErrorMessage(`Failed to reinitialize AI service: ${result.errorMessage}`);
+				}
+			} else if (selection.includes('View Service Status')) {
+				const status = await aiService.getStatus();
+				const statusText = JSON.stringify(status, null, 2);
+				vscode.window.showInformationMessage(`Service Status:\n${statusText}`, { modal: true });
+			} else if (selection.includes('Back to Main Configuration')) {
+				await showConfigurationPanel();
+			}
+
+		} catch (error) {
+			console.error('[Extension] Error in advanced settings:', error);
 			throw error;
 		}
 	}
@@ -301,6 +462,9 @@ export function activate(context: vscode.ExtensionContext) {
 				// Reinitialize AI service
 				await aiService.reinitialize();
 				
+				// Update status bar
+				statusBarService.updateStatusBar();
+				
 				// Offer to switch to AI mode
 				const switchMode = await vscode.window.showInformationMessage(
 					'Would you like to switch to AI mode now?',
@@ -310,6 +474,7 @@ export function activate(context: vscode.ExtensionContext) {
 				
 				if (switchMode === 'Yes') {
 					await configManager.enableAiMode();
+					statusBarService.updateStatusBar();
 					vscode.window.showInformationMessage('Changelogger: Switched to AI mode');
 				}
 			} else {
@@ -354,6 +519,9 @@ export function activate(context: vscode.ExtensionContext) {
 				await configManager.enableBaseMode();
 			}
 
+			// Update status bar
+			statusBarService.updateStatusBar();
+
 			console.log(`[Extension] Mode toggled from ${currentMode} to ${newMode}`);
 			vscode.window.showInformationMessage(`Changelogger: Mode changed to ${newMode.toUpperCase()}`);
 
@@ -393,6 +561,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			if (confirm === 'Yes') {
 				await configManager.resetConfiguration();
+				statusBarService.updateStatusBar();
 				vscode.window.showInformationMessage('Changelogger: Configuration reset to defaults');
 			}
 
@@ -408,12 +577,15 @@ export function activate(context: vscode.ExtensionContext) {
 	async function testAIIntegration(): Promise<void> {
 		try {
 			vscode.window.showInformationMessage('Changelogger: Testing AI integration...');
+			statusBarService.showTemporaryMessage('Testing AI...', 5000);
 			
 			const result = await aiService.testIntegration();
 			if (result.success) {
 				vscode.window.showInformationMessage(`Changelogger: AI integration test successful! Summary: ${result.summary}`);
+				statusBarService.showTemporaryMessage('AI test passed!', 3000);
 			} else {
 				vscode.window.showErrorMessage(`Changelogger: AI integration test failed: ${result.errorMessage}`);
+				statusBarService.showTemporaryMessage('AI test failed!', 3000);
 			}
 
 		} catch (error) {
@@ -427,7 +599,8 @@ export function activate(context: vscode.ExtensionContext) {
 		generateDisposable,
 		configureDisposable,
 		setApiKeyDisposable,
-		toggleModeDisposable
+		toggleModeDisposable,
+		testAIDisposable
 	);
 
 	// Log successful activation
@@ -465,5 +638,14 @@ export function deactivate() {
 		console.log('[Extension] AI integration service disposed');
 	} catch (error) {
 		console.error('[Extension] Error disposing AI integration service:', error);
+	}
+
+	// Dispose status bar service
+	try {
+		const statusBarService = StatusBarService.getInstance();
+		statusBarService.dispose();
+		console.log('[Extension] Status bar service disposed');
+	} catch (error) {
+		console.error('[Extension] Error disposing status bar service:', error);
 	}
 }

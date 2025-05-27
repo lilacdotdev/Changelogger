@@ -8,6 +8,7 @@ build/Release
 
 # Dependency directories
 node_modules/
+out/
 
 # TypeScript cache
 *.tsbuildinfo

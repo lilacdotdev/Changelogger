@@ -4,7 +4,7 @@
 ![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-<!--![Build Status](https://github.com/lilacdotdev/Changelogger/workflows/CI/badge.svg)-->
+![Build Status](https://github.com/lilacdotdev/Changelogger/workflows/tests/badge.svg)
 
 > Automatically generate changelog entries from git commits with optional AI-powered summaries
 
