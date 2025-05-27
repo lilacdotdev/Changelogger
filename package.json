@@ -2,22 +2,63 @@
   "name": "changelogger",
   "displayName": "Changelogger",
   "description": "Your Changes, Documented. Your Team, Informed.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
+    "SCM Providers",
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:changelogger.generate"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "changelogger.helloWorld",
-        "title": "Hello World"
+        "command": "changelogger.generate",
+        "title": "Changelogger: Document Changes"
+      },
+      {
+        "command": "changelogger.configure",
+        "title": "Changelogger: Open Configuration"
+      },
+      {
+        "command": "changelogger.setApiKey",
+        "title": "Changelogger: Set OpenAI API Key"
+      },
+      {
+        "command": "changelogger.toggleMode",
+        "title": "Changelogger: Toggle Mode (Base/AI)"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Changelogger",
+      "properties": {
+        "changelogger.openaiApiKey": {
+          "type": "string",
+          "description": "OpenAI API Key for AI-powered summaries (stored securely)",
+          "default": ""
+        },
+        "changelogger.mode": {
+          "type": "string",
+          "enum": ["base", "ai"],
+          "default": "base",
+          "description": "Operating mode: base (git info only) or ai (AI-powered summaries)"
+        },
+        "changelogger.changelogPath": {
+          "type": "string",
+          "description": "Path to the changelog file relative to workspace root",
+          "default": "CHANGELOG.md"
+        },
+        "changelogger.autoGenerate": {
+          "type": "boolean",
+          "description": "Automatically generate changelog entries on git commits",
+          "default": false
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

@@ -1,0 +1,54 @@
+# Changelogger Ignore File
+# Files and patterns listed here will be excluded from AI analysis
+# but will still appear in the changelog file structure changes (+/-/*)
+# Syntax is the same as .gitignore to make life easier :)
+
+# Log files
+*.log
+*.tmp
+*.temp
+
+# Dependencies
+node_modules/**
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/**
+build/**
+out/**
+*.min.js
+*.min.css
+
+# IDE and editor files
+.vscode/**
+.idea/**
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Large data files
+*.csv
+*.json
+*.xml
+*.sql
+
+# Binary files
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Documentation that doesn't need AI analysis
+README.md
+LICENSE
+CHANGELOG.md
+
+# Configuration files that are usually boilerplate
+webpack.config.js
+tsconfig.json
+.eslintrc.*
+.prettierrc.* 
