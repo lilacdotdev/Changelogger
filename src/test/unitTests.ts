@@ -43,17 +43,25 @@ function validateOpenAIApiKey(apiKey: string): { isValid: boolean; errorMessage?
 		return { isValid: false, errorMessage: 'API key cannot be empty' };
 	}
 
-	if (!apiKey.startsWith('sk-')) {
+	const trimmedKey = apiKey.trim();
+
+	if (!trimmedKey.startsWith('sk-')) {
 		return { isValid: false, errorMessage: 'API key must start with "sk-"' };
 	}
 
-	if (apiKey.length < 20 || apiKey.length > 100) {
-		return { isValid: false, errorMessage: 'API key must be between 20 and 100 characters' };
+	// Check minimum length (OpenAI keys are typically around 48-50 characters)
+	if (trimmedKey.length < 40) {
+		return { isValid: false, errorMessage: 'API key appears to be too short' };
+	}
+
+	// Check maximum reasonable length
+	if (trimmedKey.length > 100) {
+		return { isValid: false, errorMessage: 'API key appears to be too long' };
 	}
 
 	// Check for valid characters (alphanumeric, hyphens, underscores)
-	const validPattern = /^sk-[a-zA-Z0-9_-]+$/;
-	if (!validPattern.test(apiKey)) {
+	const validPattern = /^sk-[A-Za-z0-9\-_]+$/;
+	if (!validPattern.test(trimmedKey)) {
 		return { isValid: false, errorMessage: 'API key contains invalid characters' };
 	}
 
@@ -73,9 +81,15 @@ runTest('API Key Validation - Invalid Prefix', () => {
 });
 
 runTest('API Key Validation - Too Short', () => {
-	const shortKey = 'sk-abc';
+	const shortKey = 'sk-abc'; // Only 6 characters, should fail (minimum 40)
 	const result = validateOpenAIApiKey(shortKey);
 	assert.ok(!result.isValid, 'Too short API key should fail validation');
+});
+
+runTest('API Key Validation - Valid Short Key', () => {
+	const validShortKey = 'sk-' + 'a'.repeat(37); // 40 characters total (minimum)
+	const result = validateOpenAIApiKey(validShortKey);
+	assert.ok(result.isValid, 'Valid minimum length API key should pass validation');
 });
 
 runTest('API Key Validation - Empty Key', () => {
