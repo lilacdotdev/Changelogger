@@ -1,8 +1,9 @@
 {
-  "name": "changelogger",
-  "displayName": "Changelogger",
-    "description": "Your Changes, Documented. Your Team, Informed.",
+  "name": "auto-changelogger",
+  "displayName": "Auto Changelogger",
+  "description": "Your Changes, Documented. Your Team, Informed.",
   "version": "1.0.0",
+  "publisher": "LilacDotDev",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.100.0"
@@ -10,6 +11,18 @@
   "categories": [
     "SCM Providers",
     "Other"
+  ],
+  "keywords": [
+    "changelog",
+    "git",
+    "commit",
+    "documentation",
+    "ai",
+    "openai",
+    "automation",
+    "scm",
+    "version control",
+    "release notes"
   ],
   "repository": {
     "type": "git",

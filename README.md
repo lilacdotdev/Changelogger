@@ -38,7 +38,7 @@ Transform your development workflow by automatically generating comprehensive ch
 ### From VS Code Marketplace
 1. Open VS Code
 2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
-3. Search for "Changelogger"
+3. Search for "auto-changelogger"
 4. Click **Install**
 
 ### From Source
@@ -47,7 +47,7 @@ git clone https://github.com/lilacdotdev/Changelogger.git
 cd Changelogger
 npm install
 npm run compile
-code --install-extension ./Changelogger-*.vsix
+code --install-extension ./auto-changelogger-*.vsix
 ```
 
 ## 🚀 Quick Start
