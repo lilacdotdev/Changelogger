@@ -16,19 +16,22 @@ Transform your development workflow by automatically generating comprehensive ch
 - **Git Integration**: Automatically triggers on git commits
 - **Commit Tracking**: Captures author, message, and timestamp
 - **File Change Detection**: Shows added (+), modified (*), and deleted (-) files
-- **Smart Formatting**: Clean, readable changelog entries
+- **Smart Formatting**: Clean, readable, uniform changelog entries
 
 ### 🤖 AI-Powered Mode
 - **OpenAI Integration**: Intelligent summaries of code changes
 - **Context-Aware**: Understands what functionality was added, modified, or removed
 - **Concise Summaries**: 2-sentence summaries of complex changes
-- **Fallback Protection**: Gracefully falls back to base mode if API is unavailable
+- **Smart Error Handling**: User-friendly dialogs for billing, authentication, and rate limit issues
+- **Automatic Fallbacks**: Gracefully switches to base mode when AI is unavailable
+- **Quota Management**: Clear guidance when API limits are reached
 
 ### 🛡️ Base Changes Mode
 - **No Dependencies**: Works without external APIs
 - **Complete Offline**: Full functionality without internet connection
 - **Essential Information**: Git user, commit message, and file structure changes
 - **Reliable Fallback**: Automatic switching when AI mode is unavailable
+- **Always Available**: Never fails due to network or billing issues
 
 ## 📦 Installation
 
@@ -41,7 +44,7 @@ Transform your development workflow by automatically generating comprehensive ch
 ### From Source
 ```
 git clone https://github.com/lilacdotdev/Changelogger.git
-cd [TITLE]
+cd Changelogger
 npm install
 npm run compile
 code --install-extension ./Changelogger-*.vsix
@@ -114,11 +117,11 @@ Access via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 
 | Command | Description |
 |---------|-------------|
-| `Changelogger: Generate Entry` | Manually generate changelog entry |
-| `Changelogger: Configure` | Open configuration panel |
-| `Changelogger: Set API Key` | Set/update OpenAI API key |
-| `Changelogger: Toggle Mode` | Switch between Base and AI modes |
-| `Changelogger: View Changelog` | Open changelog file |
+| `Changelogger: Document Changes` | Manually generate changelog entry |
+| `Changelogger: Open Configuration` | Open configuration panel |
+| `Changelogger: Set OpenAI API Key` | Set/update OpenAI API key |
+| `Changelogger: Toggle Mode (Base/AI)` | Switch between Base and AI modes |
+| `Changelogger: Test AI Integration` | Test AI functionality and connection |
 
 ## 🔧 API Key Setup
 
@@ -133,7 +136,7 @@ Access via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 
 **Method 2: Command Palette**
 1. Open Command Palette (`Ctrl+Shift+P`)
-2. Type "Changelogger: Set API Key"
+2. Type "Changelogger: Set OpenAI API Key"
 3. Paste your API key
 
 **Method 3: Settings**
@@ -142,6 +145,15 @@ Access via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 3. Enter your API key
 
 > 🔒 **Security**: API keys are securely stored using VS Code's built-in secret storage.
+
+### 🚨 Troubleshooting API Issues
+The extension provides helpful error dialogs when API issues occur:
+- **Quota Exceeded**: Direct link to check your OpenAI billing
+- **Invalid API Key**: Easy access to update your key or check your OpenAI account
+- **Rate Limits**: Clear guidance on when to retry
+- **Model Access**: Help with account permissions
+
+All error dialogs offer the option to automatically switch to Base Mode as a fallback!
 
 ## 🛠️ Development
 
@@ -154,7 +166,7 @@ Access via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 ```
 # Clone repository
 git clone https://github.com/lilacdotdev/Changelogger.git
-cd [TITLE]
+cd Changelogger
 
 # Install dependencies
 npm install
@@ -169,23 +181,27 @@ npm test
 npm run watch
 ```
 
-### Planned Project Structure (As of 5/27) - Will update when complete
+### Project Structure
 ```
 src/
 ├── extension.ts              # Main extension entry point
 ├── git/
-│   ├── gitService.ts        # Git operations and parsing
-│   └── diffParser.ts        # Parse git diff output
+│   ├── gitService.ts        # Git operations and repository detection
+│   ├── gitDataExtractor.ts  # Extract commit data and file changes
+│   └── gitHookIntegration.ts # Automatic commit detection
 ├── changelog/
-│   ├── changelogGenerator.ts # Core changelog generation
-│   └── formatter.ts         # Format changelog entries
+│   └── changelogGenerator.ts # Core changelog generation and formatting
 ├── ai/
-│   ├── openaiService.ts     # OpenAI API integration
-│   └── promptTemplates.ts   # AI prompt templates
+│   ├── openaiService.ts     # OpenAI API integration with error handling
+│   └── aiIntegrationService.ts # AI service coordination and testing
 ├── config/
-│   ├── configManager.ts     # Extension configuration
-│   └── secretStorage.ts     # Secure API key storage
-└── test/                    # Test files
+│   └── configurationManager.ts # Extension configuration and validation
+├── ui/
+│   └── statusBar.ts         # Status bar integration and user feedback
+├── utils/
+│   ├── validation.ts        # Input validation and error checking
+│   └── fileUtils.ts         # File system operations
+└── test/                    # Comprehensive test suite
 ```
 
 ### Running Tests
@@ -201,15 +217,6 @@ npm run test:coverage
 
 # Watch mode
 npm run test:watch
-```
-
-### Building for Production
-```
-# Build extension package
-npm run package
-
-# Publish to marketplace
-npm run publish
 ```
 
 ## 🤝 Contributing
@@ -242,16 +249,20 @@ Contributions are welcome! Please feel free to make any improvements you may wis
 - Verify API key format (starts with `sk-`)
 - Check OpenAI account has available credits
 - Test API key at [OpenAI Playground](https://platform.openai.com/playground)
+- Use the "Test AI Integration" command to diagnose issues
 
 **Changelog not generating**
 - Ensure you're in a git repository
 - Check file permissions for `Changelog.md` <- very important! It's happened to me a few times and drove me NUTS
 - Verify workspace folder access
+- Check the status bar for current mode and configuration
 
 **AI summaries not working**
 - Check internet connection
 - Verify API key is correctly set
+- Look for helpful error dialogs that guide you to solutions
 - Extension automatically falls back to Base mode
+- Use "Test AI Integration" to check your setup
 
 ### Getting Help
 - 📖 Check our [Documentation](https://github.com/lilacdotdev/Changelogger/wiki)
@@ -272,6 +283,9 @@ Contributions are welcome! Please feel free to make any improvements you may wis
 ## 🗺️ Roadmap
 
 ### Version 1.1.0
+- [x] Enhanced error handling with user-friendly dialogs
+- [x] Comprehensive API error management
+- [x] Status bar integration with real-time feedback
 - [ ] Custom changelog templates
 - [ ] Commit filtering options (.clogignore)
 
@@ -280,16 +294,19 @@ Contributions are welcome! Please feel free to make any improvements you may wis
 - [ ] Individualized diff analysis (as in change-by-change summaries)
 - [ ] Changelog statistics and insights
 - [ ] Automated release notes generation
+- [ ] Advanced configuration options
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.</br>
+AI can make mistakes. Be warned not everything done will be 100% accurate. Please check to make sure and use your brain, this is only a tool!
 
 ## 🙏 Acknowledgments
 
-- **VS Code Team** - For the excellent extension API
-- **OpenAI** - For the language model API
+- **VS Code Team** - For the excellent extension API and development tools
+- **OpenAI** - For the powerful language model API
 - **simple-git** - For reliable git operations
+- **TypeScript Community** - For the amazing type safety and developer experience
 - **Contributors** - Anyone who catches the bugs I didnt or adds any fixes! Love y'all <3
 
 ## 📊 Stats
