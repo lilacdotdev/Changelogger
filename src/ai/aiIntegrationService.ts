@@ -295,7 +295,7 @@ export class AIIntegrationService {
 				return {
 					success: false,
 					errorMessage: error,
-					context: 'Service not initialized or configured'
+					context: 'Service not initialized or configured properly'
 				};
 			}
 

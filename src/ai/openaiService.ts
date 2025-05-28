@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { FileChange } from '../git/gitDataExtractor';
+import { ValidationUtils } from '../utils/validation';
 
 /**
  * Interface for OpenAI API configuration
@@ -223,6 +224,10 @@ export class OpenAIService {
 		} catch (error) {
 			const errorMessage = `Failed to generate change summary: ${error instanceof Error ? error.message : String(error)}`;
 			console.error(`[OpenAIService] ${errorMessage}`, error);
+			
+			// Handle specific OpenAI errors with user-friendly dialogs
+			this.handleOpenAIError(error, 'Change summary generation');
+			
 			return {
 				success: false,
 				errorMessage,
@@ -264,8 +269,128 @@ export class OpenAIService {
 
 		} catch (error) {
 			console.error('[OpenAIService] Connection test failed:', error);
+			this.handleOpenAIError(error, 'Connection test');
 			return false;
 		}
+	}
+
+	/**
+	 * Handle OpenAI API errors with user-friendly messages
+	 * @param error The error from OpenAI API
+	 * @param context The context where the error occurred
+	 */
+	private handleOpenAIError(error: any, context: string): void {
+		try {
+			// Check if it's an OpenAI API error with status code
+			if (error && typeof error === 'object') {
+				const errorMessage = error.message || String(error);
+				
+				// Handle quota/billing errors (429)
+				if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('billing')) {
+					console.error(`[OpenAIService] Quota/billing error in ${context}:`, errorMessage);
+					this.showBillingErrorDialog();
+					return;
+				}
+				
+				// Handle authentication errors (401)
+				if (errorMessage.includes('401') || errorMessage.includes('authentication') || errorMessage.includes('invalid_api_key')) {
+					console.error(`[OpenAIService] Authentication error in ${context}:`, errorMessage);
+					this.showAuthenticationErrorDialog();
+					return;
+				}
+				
+				// Handle rate limiting (429 without quota mention)
+				if (errorMessage.includes('rate_limit') || errorMessage.includes('too many requests')) {
+					console.error(`[OpenAIService] Rate limit error in ${context}:`, errorMessage);
+					this.showRateLimitErrorDialog();
+					return;
+				}
+				
+				// Handle model/permission errors (403, 404)
+				if (errorMessage.includes('403') || errorMessage.includes('404') || errorMessage.includes('model') || errorMessage.includes('permission')) {
+					console.error(`[OpenAIService] Model/permission error in ${context}:`, errorMessage);
+					this.showModelErrorDialog();
+					return;
+				}
+			}
+			
+			// Generic error handling
+			console.error(`[OpenAIService] Generic error in ${context}:`, error);
+			
+		} catch (handlingError) {
+			console.error('[OpenAIService] Error while handling OpenAI error:', handlingError);
+		}
+	}
+
+	/**
+	 * Show billing/quota error dialog to user
+	 */
+	private showBillingErrorDialog(): void {
+		// Import vscode dynamically to avoid issues in testing
+		const vscode = require('vscode');
+		
+		const message = 'OpenAI API quota exceeded. Your account has reached its usage limit or billing quota.';
+		const actions = ['Check Billing', 'Switch to Base Mode', 'Dismiss'];
+		
+		vscode.window.showErrorMessage(`Changelogger: ${message}`, ...actions).then((selection: string) => {
+			if (selection === 'Check Billing') {
+				vscode.env.openExternal(vscode.Uri.parse('https://platform.openai.com/account/billing'));
+			} else if (selection === 'Switch to Base Mode') {
+				vscode.commands.executeCommand('changelogger.toggleMode');
+			}
+		});
+	}
+
+	/**
+	 * Show authentication error dialog to user
+	 */
+	private showAuthenticationErrorDialog(): void {
+		const vscode = require('vscode');
+		
+		const message = 'OpenAI API authentication failed. Your API key may be invalid or expired.';
+		const actions = ['Update API Key', 'Check API Key', 'Dismiss'];
+		
+		vscode.window.showErrorMessage(`Changelogger: ${message}`, ...actions).then((selection: string) => {
+			if (selection === 'Update API Key') {
+				vscode.commands.executeCommand('changelogger.setApiKey');
+			} else if (selection === 'Check API Key') {
+				vscode.env.openExternal(vscode.Uri.parse('https://platform.openai.com/api-keys'));
+			}
+		});
+	}
+
+	/**
+	 * Show rate limit error dialog to user
+	 */
+	private showRateLimitErrorDialog(): void {
+		const vscode = require('vscode');
+		
+		const message = 'OpenAI API rate limit exceeded. Please wait a moment before trying again.';
+		const actions = ['Retry Later', 'Switch to Base Mode', 'Dismiss'];
+		
+		vscode.window.showWarningMessage(`Changelogger: ${message}`, ...actions).then((selection: string) => {
+			if (selection === 'Switch to Base Mode') {
+				vscode.commands.executeCommand('changelogger.toggleMode');
+			}
+		});
+	}
+
+	/**
+	 * Show model/permission error dialog to user
+	 */
+	private showModelErrorDialog(): void {
+		const vscode = require('vscode');
+		
+		const message = 'OpenAI model access error. You may not have access to the requested model.';
+		const actions = ['Check Account', 'Switch to Base Mode', 'Dismiss'];
+		
+		vscode.window.showErrorMessage(`Changelogger: ${message}`, ...actions).then((selection: string) => {
+			if (selection === 'Check Account') {
+				vscode.env.openExternal(vscode.Uri.parse('https://platform.openai.com/account'));
+			} else if (selection === 'Switch to Base Mode') {
+				vscode.commands.executeCommand('changelogger.toggleMode');
+			}
+		});
 	}
 
 	/**
@@ -274,9 +399,9 @@ export class OpenAIService {
 	 * @returns boolean Whether the API key format is valid
 	 */
 	private validateApiKey(apiKey: string): boolean {
-		// OpenAI API keys start with 'sk-' and are typically 51 characters long
-		const apiKeyRegex = /^sk-[a-zA-Z0-9]{48}$/;
-		return apiKeyRegex.test(apiKey);
+		// Use the same validation as ValidationUtils for consistency
+		const validation = ValidationUtils.validateOpenAIApiKey(apiKey);
+		return validation.isValid;
 	}
 
 	/**

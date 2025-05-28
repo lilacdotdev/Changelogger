@@ -298,6 +298,8 @@ export class ConfigurationManager {
 	 */
 	public async isAiModeAvailable(): Promise<boolean> {
 		try {
+			console.log('[ConfigurationManager] Checking AI mode availability');
+			
 			const apiKey = await this.getApiKey();
 			if (!apiKey || apiKey.trim() === '') {
 				return false;

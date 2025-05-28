@@ -1,8 +1,9 @@
 {
   "name": "changelogger",
   "displayName": "Changelogger",
-  "description": "Your Changes, Documented. Your Team, Informed.",
-  "version": "0.0.3",
+    "description": "Your Changes, Documented. Your Team, Informed.",
+  "version": "1.0.0",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.100.0"
   },
@@ -10,6 +11,14 @@
     "SCM Providers",
     "Other"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lilacdotdev/Changelogger.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lilacdotdev/Changelogger/issues"
+  },
+  "homepage": "https://github.com/lilacdotdev/Changelogger#readme",
   "activationEvents": [
     "onCommand:changelogger.generate"
   ],

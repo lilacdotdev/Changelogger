@@ -576,14 +576,33 @@ export function activate(context: vscode.ExtensionContext) {
 	 */
 	async function testAIIntegration(): Promise<void> {
 		try {
+			console.log('[Extension] Testing AI integration');
 			vscode.window.showInformationMessage('Changelogger: Testing AI integration...');
 			statusBarService.showTemporaryMessage('Testing AI...', 5000);
 			
+			// Check if AI service is ready
+			const isReady = await aiService.isReady();
+			if (!isReady) {
+				console.log('[Extension] AI service not ready, attempting initialization...');
+				const initResult = await aiService.initialize();
+				
+				if (!initResult.success) {
+					console.error('[Extension] AI service initialization failed:', initResult.errorMessage);
+					vscode.window.showErrorMessage(`Changelogger: AI initialization failed: ${initResult.errorMessage}`);
+					statusBarService.showTemporaryMessage('AI init failed!', 3000);
+					return;
+				}
+			}
+			
+			// Run the integration test
 			const result = await aiService.testIntegration();
+			
 			if (result.success) {
+				console.log('[Extension] AI integration test successful');
 				vscode.window.showInformationMessage(`Changelogger: AI integration test successful! Summary: ${result.summary}`);
 				statusBarService.showTemporaryMessage('AI test passed!', 3000);
 			} else {
+				console.error('[Extension] AI integration test failed:', result.errorMessage);
 				vscode.window.showErrorMessage(`Changelogger: AI integration test failed: ${result.errorMessage}`);
 				statusBarService.showTemporaryMessage('AI test failed!', 3000);
 			}
